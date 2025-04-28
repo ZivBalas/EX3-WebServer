@@ -102,6 +102,7 @@ void receiveMessage(int index)
         removeSocket(index);
         return;
     }
+    //test delete
     if (bytesRecv == 0)
     {
         closesocket(msgSocket);
