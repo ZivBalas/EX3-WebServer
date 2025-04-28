@@ -129,7 +129,6 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Server.cpp" />
-    <ClCompile Include="work_with.cpp" />
     <ClCompile Include="SocketState.cpp" />
   </ItemGroup>
   <ItemGroup>
