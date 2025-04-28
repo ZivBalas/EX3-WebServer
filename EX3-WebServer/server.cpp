@@ -8,6 +8,12 @@ using namespace std;
 #include <winsock2.h>
 #include <string.h>
 
+//TODO:
+// 1. SPLIT TO CLASSES
+// 2. CHANGE CHAT-GPT THINGS TO NORMAL
+// 3. CLIENT NOT STOP AFTER 1 ASK
+// 4. ADD AND DELETE COMMENTS
+
 struct SocketState
 {
     SOCKET id;         // Socket handle
@@ -266,7 +272,6 @@ int main()
                 sendMessage(i);
         }
     }
-
     WSACleanup();
     return 0;
 }
