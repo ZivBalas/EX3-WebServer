@@ -1,75 +1,28 @@
-#define _WINSOCK_DEPRECATED_NO_WARNINGS
-#define _CRT_SECURE_NO_WARNINGS
-#include <iostream>
-#include <fstream>
-#include <string>
-using namespace std;
-#pragma comment(lib, "Ws2_32.lib")
-#include <winsock2.h>
-#include <string.h>
+#include "Server.h"
 
-//TODO:
-// 1. SPLIT TO CLASSES
-// 2. CHANGE CHAT-GPT THINGS TO NORMAL
-// 3. CLIENT NOT STOP AFTER 1 ASK
-// 4. ADD AND DELETE COMMENTS
-
-struct SocketState
-{
-    SOCKET id;         // Socket handle
-    int recv;          // Receiving?
-    int send;          // Sending?
-    char buffer[4096]; // Buffer to hold received data
-    int len;
-};
-
-const int TIME_PORT = 27015;
-const int MAX_SOCKETS = 60;
-const int EMPTY = 0;
-const int LISTEN = 1;
-const int RECEIVE = 2;
-const int IDLE = 3;
-const int SEND = 4;
-
-bool addSocket(SOCKET id, int what);
-void removeSocket(int index);
-void acceptConnection(int index);
-void receiveMessage(int index);
-void sendMessage(int index);
-
-struct SocketState sockets[MAX_SOCKETS] = { 0 };
-int socketsCount = 0;
-
-// Adds a new socket to the socket array
-bool addSocket(SOCKET id, int what)
+bool Server::addSocket(SOCKET id, int what)
 {
     for (int i = 0; i < MAX_SOCKETS; i++)
     {
-        if (sockets[i].recv == EMPTY)
+        if (sockets[i].getRecieveState() == EMPTY)
         {
-            sockets[i].id = id;
-            sockets[i].recv = what;
-            sockets[i].send = IDLE;
-            sockets[i].len = 0;
+            sockets[i].createNewSocket(id, what);
             socketsCount++;
             return true;
         }
+        return false;
     }
-    return false;
 }
 
-// Removes a socket from the socket array
-void removeSocket(int index)
+void Server::removeSocket(int index)
 {
-    sockets[index].recv = EMPTY;
-    sockets[index].send = EMPTY;
+    sockets[index].emptySocket();
     socketsCount--;
 }
 
-// Accepts a new incoming connection
-void acceptConnection(int index)
+void Server::acceptConnection(int index)
 {
-    SOCKET id = sockets[index].id;
+    SOCKET id = sockets[index].getID();
     struct sockaddr_in from;
     int fromLen = sizeof(from);
 
@@ -94,43 +47,114 @@ void acceptConnection(int index)
     }
 }
 
-// Receives a message from the client
-void receiveMessage(int index)
+void Server::receiveMessage(int index)
 {
-    SOCKET msgSocket = sockets[index].id;
-    int len = sockets[index].len;
-    int bytesRecv = recv(msgSocket, &sockets[index].buffer[len], sizeof(sockets[index].buffer) - len - 1, 0);
+    int bytesRecv = sockets[index].recieve();
 
-    if (SOCKET_ERROR == bytesRecv)
+    if (bytesRecv == SOCKET_ERROR || bytesRecv == 0)
     {
-        cout << "Error at recv(): " << WSAGetLastError() << endl;
-        closesocket(msgSocket);
+        if (bytesRecv == SOCKET_ERROR)
+            cout << "Error at recv(): " << WSAGetLastError() << endl;
+
         removeSocket(index);
         return;
     }
-    //test delete
-    if (bytesRecv == 0)
-    {
-        closesocket(msgSocket);
-        removeSocket(index);
-        return;
-    }
-
-    sockets[index].buffer[len + bytesRecv] = '\0'; // Null-terminate the received data
-    cout << "Received:\n" << sockets[index].buffer << endl;
-
-    sockets[index].len += bytesRecv;
-    sockets[index].recv = IDLE;
-    sockets[index].send = SEND;
 }
 
-// Sends a response to the client based on the request
-void sendMessage(int index)
+int Server::initialize()
 {
-    SOCKET msgSocket = sockets[index].id;
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
+    {
+        cout << "WSAStartup failed\n";
+        return 1;
+    }
+
+    SOCKET listenSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (listenSocket == INVALID_SOCKET)
+    {
+        cout << "Socket creation failed\n";
+        WSACleanup();
+        return 1;
+    }
+
+    sockaddr_in serverService;
+    serverService.sin_family = AF_INET;
+    serverService.sin_addr.s_addr = INADDR_ANY;
+    serverService.sin_port = htons(TIME_PORT);
+
+    if (bind(listenSocket, (SOCKADDR*)&serverService, sizeof(serverService)) == SOCKET_ERROR)
+    {
+        cout << "Bind failed\n";
+        closesocket(listenSocket);
+        WSACleanup();
+        return 1;
+    }
+
+    if (listen(listenSocket, 5) == SOCKET_ERROR)
+    {
+        cout << "Listen failed\n";
+        closesocket(listenSocket);
+        WSACleanup();
+        return 1;
+    }
+
+    addSocket(listenSocket, LISTEN);
+
+    cout << "HTTP Server: Listening on port " << TIME_PORT << endl;
+}
+
+int Server::Run()
+{
+    if (initialize() == 1)
+        return 1;
+
+    while (true)
+    {
+        fd_set waitRecv;
+        FD_ZERO(&waitRecv);
+
+        for (int i = 0; i < MAX_SOCKETS; i++)
+        {
+            if (sockets[i].getRecieveState() == LISTEN || sockets[i].getRecieveState() == RECEIVE)
+                FD_SET(sockets[i].getID(), &waitRecv);
+        }
+
+        int nfd = select(0, &waitRecv, NULL, NULL, NULL);
+        if (nfd == SOCKET_ERROR)
+        {
+            cout << "Select error\n";
+            break;
+        }
+
+        for (int i = 0; i < MAX_SOCKETS && nfd > 0; i++)
+        {
+            if (FD_ISSET(sockets[i].getID(), &waitRecv))
+            {
+                nfd--;
+                if (sockets[i].getRecieveState() == LISTEN)
+                    acceptConnection(i);
+                else if (sockets[i].getRecieveState() == RECEIVE)
+                    receiveMessage(i);
+            }
+        }
+
+        for (int i = 0; i < MAX_SOCKETS; i++)
+        {
+            if (sockets[i].getSendState() == SEND)
+                sendMessage(i);
+        }
+    }
+    WSACleanup();
+
+    return 0;
+}
+
+void Server::sendMessage(int index)
+{
+    SOCKET msgSocket = sockets[index].getID();
     char response[4096] = { 0 };
 
-    string request(sockets[index].buffer);
+    string request(sockets[index].getBuffer());
 
     if (request.find("GET") == 0)
     {
@@ -193,85 +217,4 @@ void sendMessage(int index)
     removeSocket(index);
 }
 
-// Main function
-int main()
-{
-    WSAData wsaData;
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
-    {
-        cout << "WSAStartup failed\n";
-        return 1;
-    }
 
-    SOCKET listenSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (listenSocket == INVALID_SOCKET)
-    {
-        cout << "Socket creation failed\n";
-        WSACleanup();
-        return 1;
-    }
-
-    sockaddr_in serverService;
-    serverService.sin_family = AF_INET;
-    serverService.sin_addr.s_addr = INADDR_ANY;
-    serverService.sin_port = htons(TIME_PORT);
-
-    if (bind(listenSocket, (SOCKADDR*)&serverService, sizeof(serverService)) == SOCKET_ERROR)
-    {
-        cout << "Bind failed\n";
-        closesocket(listenSocket);
-        WSACleanup();
-        return 1;
-    }
-
-    if (listen(listenSocket, 5) == SOCKET_ERROR)
-    {
-        cout << "Listen failed\n";
-        closesocket(listenSocket);
-        WSACleanup();
-        return 1;
-    }
-
-    addSocket(listenSocket, LISTEN);
-
-    cout << "HTTP Server: Listening on port " << TIME_PORT << endl;
-
-    while (true)
-    {
-        fd_set waitRecv;
-        FD_ZERO(&waitRecv);
-
-        for (int i = 0; i < MAX_SOCKETS; i++)
-        {
-            if (sockets[i].recv == LISTEN || sockets[i].recv == RECEIVE)
-                FD_SET(sockets[i].id, &waitRecv);
-        }
-
-        int nfd = select(0, &waitRecv, NULL, NULL, NULL);
-        if (nfd == SOCKET_ERROR)
-        {
-            cout << "Select error\n";
-            break;
-        }
-
-        for (int i = 0; i < MAX_SOCKETS && nfd > 0; i++)
-        {
-            if (FD_ISSET(sockets[i].id, &waitRecv))
-            {
-                nfd--;
-                if (sockets[i].recv == LISTEN)
-                    acceptConnection(i);
-                else if (sockets[i].recv == RECEIVE)
-                    receiveMessage(i);
-            }
-        }
-
-        for (int i = 0; i < MAX_SOCKETS; i++)
-        {
-            if (sockets[i].send == SEND)
-                sendMessage(i);
-        }
-    }
-    WSACleanup();
-    return 0;
-}
