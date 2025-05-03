@@ -8,7 +8,8 @@ class Server
 	SOCKET listenSocket;
 	SocketState sockets[MAX_SOCKETS];
 	int socketsCount = 0;
-
+	void onlineLoop();
+	void shutDownServer();
 public:
 	bool addSocket(SOCKET id, int what);
 	void removeSocket(int index);

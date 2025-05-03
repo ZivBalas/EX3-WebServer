@@ -16,3 +16,5 @@ const int LISTEN = 1;
 const int RECEIVE = 2;
 const int IDLE = 3;
 const int SEND = 4;
+const int SEND_TIME = 1;
+const int SEND_SECONDS = 2;

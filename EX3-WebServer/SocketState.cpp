@@ -16,15 +16,16 @@ void SocketState::emptySocket()
 
 int SocketState::recieve()
 {
-    int bytesRecv = recv(id, &buffer[len], sizeof(buffer) - len - 1, 0);
+    int bytesRecv = recv(id, &buffer[len], sizeof(buffer) - len, 0);
 
     if (bytesRecv != SOCKET_ERROR && bytesRecv != 0)
     {
         buffer[len + bytesRecv] = '\0'; // Null-terminate the received data
-        cout << "Received:\n" << buffer << endl;
+        cout << "Web Server: Recieved: " << bytesRecv << " bytes of \"" << &buffer[len] << "\" message.\n";
 
         len += bytesRecv;
-        recieve_state = IDLE;
+        
+        recieve_state = IDLE; //maybe we have to change because it different from hadar example.
         send_state = SEND;
     }
     else
