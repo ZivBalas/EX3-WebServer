@@ -21,6 +21,14 @@ void Server::onlineLoop()
                 FD_SET(sockets[i].getID(), &waitSend);
         }
 
+        static time_t lastCheck = time(0);
+        if (difftime(time(0), lastCheck) >= 10)
+        { 
+            checkForTimeouts();
+            lastCheck = time(0);
+        }
+
+
         int nfd = select(0, &waitRecv, &waitSend, NULL, NULL);
         if (nfd == SOCKET_ERROR)
         {
@@ -165,7 +173,6 @@ int Server::initialize()
     cout << "HTTP Server: Listening on port " << TIME_PORT << endl;
 }
 
-
 int Server::Run()
 {
     if (initialize() == 1)
@@ -180,6 +187,19 @@ void Server::sendMessage(int index)
 {
     sockets[index].sendMsg();
     removeSocket(index);
+}
+
+void Server::checkForTimeouts() {
+    time_t now = time(0);
+    for (int i = 0; i < MAX_SOCKETS; i++) {
+        if (sockets[i].getRecieveState() != EMPTY) {
+            if (difftime(now, sockets[i].getLastActivity()) > 120) {
+                cout << "? Closing idle socket: " << i << " after 2 minutes.\n";
+                closesocket(sockets[i].getID());
+                removeSocket(i);
+            }
+        }
+    }
 }
 
 

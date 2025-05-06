@@ -17,6 +17,7 @@ public:
 	void receiveMessage(int index);
 	int initialize();
 	void sendMessage(int index);
+	void checkForTimeouts();
 	int Run();
 };
 

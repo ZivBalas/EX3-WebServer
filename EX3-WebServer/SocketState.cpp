@@ -2,6 +2,7 @@
 
 void SocketState::createNewSocket(SOCKET id, int what_to_response)
 {
+    this->lastActivityTime = time(0);
     this->id = id;
     this->recieve_state = what_to_response;
     this->send_state = IDLE;
@@ -17,6 +18,14 @@ void SocketState::emptySocket()
 int SocketState::recieve()
 {
     int bytesRecv = recv(id, &buffer[len], sizeof(buffer) - len, 0);
+
+    //if (string(buffer).find("\r\n\r\n") == string::npos) {
+    //    // זה הזמן לעבור ל־SEND
+    //    cout << "not found" << endl;
+    //    recieve_state = IDLE;
+    //    send_state = SEND;
+    //}
+    this->lastActivityTime = time(0);
 
     if (bytesRecv != SOCKET_ERROR && bytesRecv != 0)
     {
@@ -60,7 +69,7 @@ int SocketState::sendMsg()
         }
         else
         {
-            string html((istreambuf_iterator<char>(file)), istreambuf_iterator<char>());
+            string html((istreambuf_iterator<char>(file)), istreambuf_iterator<char>());//string html;   char c;   while (file.get(c)) html += c;
             string ok = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: " + to_string(html.length()) + "\r\n\r\n" + html;
             send(msgSocket, ok.c_str(), (int)ok.length(), 0);
         }
@@ -97,6 +106,9 @@ int SocketState::sendMsg()
         string badRequest = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n";
         send(msgSocket, badRequest.c_str(), (int)badRequest.length(), 0);
     }
+
+    this->lastActivityTime = time(0);
+
 
     closesocket(msgSocket);
     return 0;
