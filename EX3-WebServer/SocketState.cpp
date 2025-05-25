@@ -19,12 +19,6 @@ int SocketState::recieve()
 {
     int bytesRecv = recv(id, &buffer[len], sizeof(buffer) - len, 0);
 
-    //if (string(buffer).find("\r\n\r\n") == string::npos) {
-    //    // זה הזמן לעבור ל־SEND
-    //    cout << "not found" << endl;
-    //    recieve_state = IDLE;
-    //    send_state = SEND;
-    //}
     this->lastActivityTime = time(0);
 
     if (bytesRecv != SOCKET_ERROR && bytesRecv != 0)
@@ -182,13 +176,5 @@ int SocketState::sendMsg()
     closesocket(msgSocket);
     return 0;
 
-    //int bytesSent = send(id, badRequest.c_str(), (int)badRequest.length(), 0);
-
-    //if (SOCKET_ERROR == bytesSent)
-    //{
-    //    cout << "Web Server: Error at send(): " << WSAGetLastError() << endl;
-    //    return;
-    //}
-    //cout << "Web Server: Sent: " << bytesSent << "\\" << strlen(sendBuff) << " bytes of \"" << sendBuff << "\" message.\n";
-    //return 0;
+  
 }
