@@ -181,14 +181,4 @@ int SocketState::sendMsg()
 
     closesocket(msgSocket);
     return 0;
-
-    //int bytesSent = send(id, badRequest.c_str(), (int)badRequest.length(), 0);
-
-    //if (SOCKET_ERROR == bytesSent)
-    //{
-    //    cout << "Web Server: Error at send(): " << WSAGetLastError() << endl;
-    //    return;
-    //}
-    //cout << "Web Server: Sent: " << bytesSent << "\\" << strlen(sendBuff) << " bytes of \"" << sendBuff << "\" message.\n";
-    //return 0;
 }

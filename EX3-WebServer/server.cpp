@@ -194,7 +194,7 @@ void Server::checkForTimeouts() {
     for (int i = 0; i < MAX_SOCKETS; i++) {
         if (sockets[i].getRecieveState() != EMPTY) {
             if (difftime(now, sockets[i].getLastActivity()) > 120) {
-                cout << "? Closing idle socket: " << i << " after 2 minutes.\n";
+                cout << "Closing idle socket: " << i << " 2 minutes passed.\n";
                 closesocket(sockets[i].getID());
                 removeSocket(i);
             }
