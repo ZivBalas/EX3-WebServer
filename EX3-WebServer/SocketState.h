@@ -6,7 +6,6 @@ class SocketState
     SOCKET id;               // Socket handle
     int recieve_state;       // State for receiving data
     int send_state;          // State for sending data
-    int sendSubType;         // (Not used) Placeholder for future sub-type handling
     char buffer[2000];       // Buffer for received data
     int len;                 // Length of data currently in buffer
     time_t lastActivityTime; // Last activity timestamp for timeout tracking

@@ -23,12 +23,12 @@ int SocketState::recieve()
 
     if (bytesRecv != SOCKET_ERROR && bytesRecv != 0)
     {
-        buffer[len + bytesRecv] = '\0'; // Null-terminate the received data
+        buffer[len + bytesRecv] = '\0'; 
         cout << "Web Server: Recieved: " << bytesRecv << " bytes of \"" << &buffer[len] << "\" message.\n";
 
         len += bytesRecv;
         
-        recieve_state = IDLE; //maybe we have to change because it different from hadar example.
+        recieve_state = IDLE;
         send_state = SEND;
     }
     else
@@ -87,20 +87,18 @@ int SocketState::sendMsg()
     }
     else if (request.find("DELETE") == 0)
     {
-        // שלב 1: חילוץ שם הקובץ מה־URL
-        size_t startPos = request.find("DELETE") + 7; // מדלג על "DELETE "
-        size_t endPos = request.find(" ", startPos); // מוצא את סוף ה־URL
+        //find file name
+        size_t startPos = request.find("DELETE") + 7;
+        size_t endPos = request.find(" ", startPos); 
         string path = request.substr(startPos, endPos - startPos);
 
-        // מסיר '/' אם יש
         if (!path.empty() && path[0] == '/')
             path = path.substr(1);
 
-        // שלב 2: ניסיון למחוק את הקובץ
+        //try to remove the requested file to delete
         int result = remove(path.c_str());
 
-        // שלב 3: שליחת תגובה בהתאם
-        if (result == 0)
+        if (result == 0)    //success
         {
             string ok = "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n";
             send(msgSocket, ok.c_str(), (int)ok.length(), 0);
@@ -113,16 +111,16 @@ int SocketState::sendMsg()
     }
     else if (request.find("PUT") == 0)
     {
-        // חילוץ שם הקובץ מהשורה הראשונה
+        //extract file name
         size_t startPath = request.find(" ") + 1;
         size_t endPath = request.find(" ", startPath);
-        string filePath = "." + request.substr(startPath, endPath - startPath); // מוסיף "./" כדי לכתוב לתיקייה הנוכחית
+        string filePath = "." + request.substr(startPath, endPath - startPath); 
 
-        // חילוץ גוף הבקשה
+        //extract body of request
         size_t bodyPos = request.find("\r\n\r\n");
         string body = (bodyPos != string::npos) ? request.substr(bodyPos + 4) : "";
 
-        // כתיבה לקובץ בשם המדויק
+        //write to file
         ofstream out(filePath);
         if (out.is_open()) {
             out << body;
@@ -138,7 +136,7 @@ int SocketState::sendMsg()
 
     else if (request.find("HEAD") == 0)
     {
-        string lang = "en"; // ברירת מחדל
+        string lang = "en"; //default language
         size_t langPos = request.find("lang=");
         if (langPos != string::npos)
         {
